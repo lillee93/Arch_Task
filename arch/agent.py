@@ -4,8 +4,8 @@ from arch.java_static import scan_repo_java
 from arch.dep_graph import build_package_graph, compute_degrees, find_cycles
 from tools.prompt_builder import build_architecture_prompt
 from arch.smells import detect_dependency_magnets, detect_cycles, detect_oversized_packages
-from rag_pipeline.llm_client import generate_answer
-from arch.verify_arch import verify_arch_response  
+from tools.llm_client import generate_arch_answer_with_fallback
+from tools.verify import verify_arch_response  
 
 def run_architecture_analysis(repo_path):
     java_files = scan_repo_java(repo_path)
@@ -23,20 +23,9 @@ def run_architecture_analysis(repo_path):
     prompt = build_architecture_prompt(config.ARCH_QUERY, evidence)
     print("\n=== PROMPT ===\n")
     print(prompt)
-    answer = generate_answer(prompt)
+    answer = generate_arch_answer_with_fallback(prompt, evidence, verify_arch_response)
 
-    ok2, msg = verify_arch_response(answer, evidence)
-    if not ok2:
-        return "BLOCKED: " + msg
-    
     return answer
-
-
-
-
-
-import re
-
 
 
 def _format_dependency_evidence(graph, cycle_findings, magnets, oversized):
@@ -46,8 +35,6 @@ def _format_dependency_evidence(graph, cycle_findings, magnets, oversized):
       - EDGE_k lines (derived from cycles)
       - MAGNET_k lines (with sample file paths as raw strings)
       - OVERSIZED_k lines
-
-    No FILE index to keep prompt short for small context models.
     """
     n_nodes = len(graph.keys())
     n_edges = 0

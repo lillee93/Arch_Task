@@ -5,7 +5,7 @@ from rag_pipeline.ingestion import ingest_repository
 from rag_pipeline.embedding import embed_and_store, load_collection
 from rag_pipeline.retrieval import retrieve_top_k
 from tools.prompt_builder import build_prompt
-from rag_pipeline.llm_client import llm_is_available, safe_generate_answer, retrieval_looks_relevant, build_fallback_answer
+from tools.llm_client import llm_is_available, safe_generate_answer, retrieval_looks_relevant, build_fallback_answer
 from tools.verify import verify_citations
 
 from arch.agent import run_architecture_analysis

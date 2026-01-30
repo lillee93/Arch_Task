@@ -1,4 +1,3 @@
-# ingestion.py
 import os
 
 class DocumentChunk:
@@ -6,7 +5,7 @@ class DocumentChunk:
         self.id = chunk_id
         self.text = text
         self.metadata = metadata
-        self.score = None  # filled during retrieval if needed
+        self.score = None
 
 
 def ingest_repository(repo_path):
@@ -35,7 +34,7 @@ def ingest_repository(repo_path):
             documents.append(DocumentChunk(chunk_id, para, metadata))
             idx += 1
 
-    # 2) Java files (whole-file chunks)
+    # Java files (whole-file chunks)
     for root, _, files in os.walk(repo_path):
         for name in files:
             if not name.endswith(".java"):
@@ -59,7 +58,7 @@ def ingest_repository(repo_path):
             if rel_path.startswith("src/test/"):
                 continue
 
-            class_name = name[:-5]  # drop ".java"
+            class_name = name[:-5]
             metadata = {"source": rel_path, "type": "code", "class": class_name}
 
             documents.append(DocumentChunk(rel_path, code, metadata))

@@ -1,4 +1,3 @@
-# llm_client.py
 import re
 import requests
 import config
@@ -33,7 +32,7 @@ def retrieval_looks_relevant(question, retrieved):
             useful.append(t)
 
     if not useful:
-        return True  # don't block if question is too short / generic
+        return True
 
     best_hits = 0
     for chunk in retrieved:
@@ -75,6 +74,113 @@ def build_fallback_answer(reason, question, retrieved):
 
     return "\n".join(out)
 
+
+def generate_arch_answer_with_fallback(prompt, evidence, verify_fn):
+    # 1) LLM not available -> deterministic fallback
+    if not llm_is_available():
+        return build_arch_fallback_answer(evidence, "LLM not available")
+
+    # 2) Try LLM
+    answer, err = safe_generate_answer(prompt)
+    if answer is None:
+        return build_arch_fallback_answer(evidence, err)
+
+    # 3) Verify LLM output; if fails -> deterministic fallback
+    ok, msg = verify_fn(answer, evidence)
+    if not ok:
+        return build_arch_fallback_answer(evidence, "verify failed: " + msg)
+
+    return answer
+
+
+def build_arch_fallback_answer(evidence, reason):
+    pick = _pick_first_cycle_and_edge(evidence)
+    if pick is None:
+        out = []
+        out.append("I cannot propose a grounded refactoring from the provided evidence.")
+        out.append("")
+        out.append("Reason: " + str(reason))
+        out.append("")
+        out.append("Dependency evidence (raw):")
+        out.append(evidence)
+        return "\n".join(out)
+
+    cycle_id = pick["cycle_id"]
+    cycle_path = pick["cycle_path"]
+    edge_id = pick["edge_id"]
+    a = pick["edge_a"]
+    b = pick["edge_b"]
+
+    out = []
+    out.append("Architectural smell: cyclic dependency between packages. [" + cycle_id + "]")
+    out.append("")
+    out.append("Evidence cycle path: `" + cycle_path + "` [" + cycle_id + "]")
+    out.append("Remove edge: " + a + " -> " + b + " [" + edge_id + "]")
+    out.append("")
+    out.append("Short description of the change:")
+    out.append("- Stop " + a + " from depending on " + b + " by introducing an interface (or DTO) that lives in " + a + ". [" + edge_id + "]")
+    out.append("- Update " + b + " to implement/consume that interface so the dependency direction becomes one-way (b -> a), not (a -> b). [" + edge_id + "]")
+    out.append("")
+    out.append("Rationale:")
+    out.append("- This breaks the cycle and reduces change ripple across the involved packages. [" + cycle_id + "][" + edge_id + "]")
+    out.append("")
+    out.append("Expected impact on quality attributes:")
+    out.append("- Maintainability: clearer dependency direction and fewer cross-package changes. [" + cycle_id + "]")
+    out.append("- Testability: " + a + " can be tested with a stub implementation without pulling in " + b + ". [" + edge_id + "]")
+    out.append("")
+    out.append("Dependency rule (after): " + a + " must not depend on " + b + ". [" + edge_id + "]")
+    out.append("")
+    out.append("Note: Fallback used because " + str(reason) + ".")
+
+    return "\n".join(out)
+
+
+def _pick_first_cycle_and_edge(evidence):
+    lines = evidence.splitlines()
+
+    cycle_id = None
+    cycle_path = None
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.startswith("CYCLE_") and ": " in line:
+            cycle_id = line.split(":")[0].strip()
+            cycle_path = line[len(cycle_id) + 2 :].strip()
+            break
+        i += 1
+
+    if cycle_id is None:
+        return None
+
+    want = " cycle=" + cycle_id
+    edge_id = None
+    edge_a = None
+    edge_b = None
+
+    j = 0
+    while j < len(lines):
+        line = lines[j].strip()
+        if line.startswith("EDGE_") and want in line and ": " in line:
+            edge_id = line.split(":")[0].strip()
+            rest = line[len(edge_id) + 2 :].strip()
+            left = rest.split(" cycle=")[0].strip()  
+            if " -> " in left:
+                edge_a = left.split(" -> ")[0].strip()
+                edge_b = left.split(" -> ")[1].strip()
+                break
+        j += 1
+
+    if edge_id is None:
+        return None
+
+    return {
+        "cycle_id": cycle_id,
+        "cycle_path": cycle_path,
+        "edge_id": edge_id,
+        "edge_a": edge_a,
+        "edge_b": edge_b,
+    }
 
 def pick_evidence_snippet(question, chunk_text):
     # Find 5 lines around the best matching line; fallback to first 8 lines.
@@ -143,12 +249,16 @@ def generate_answer(prompt):
     }
     try:
         r = requests.post(api_url, json=payload, timeout=config.LM_TIMEOUT_SECS)
+        r.raise_for_status()
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to generate answer: {e}")
             
-    data = r.json()
+    try:
+        data = r.json()
+    except Exception as e:
+        raise RuntimeError("LM Studio returned non-JSON response: " + str(e))
 
     if data.get("error"):
-        raise RuntimeError(f"LM Studio API error: {data['error']}")
+        raise RuntimeError("LM Studio API error: " + str(data["error"]))
     
     return data["choices"][0]["message"]["content"]

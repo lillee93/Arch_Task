@@ -1,4 +1,3 @@
-# arch/dep_graph.py
 def _best_internal_package(import_path, internal_packages):
     # Map "a.b.c.Class" to the longest matching known package prefix.
     best = ""
@@ -69,7 +68,6 @@ def find_cycles(graph, limit):
             if v not in visited:
                 dfs(v)
             elif v in on_stack:
-                # cycle = from v to end
                 i = 0
                 while i < len(stack):
                     if stack[i] == v:
