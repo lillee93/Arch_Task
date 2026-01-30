@@ -1,0 +1,17 @@
+__pycache__/
+
+/tools/__pycache__/
+
+/arch/__pycache__/
+
+/out/
+
+rag_pipeline/.venv/
+
+.env
+
+.idea/, .vscode/
+
+*.pyc
+
+chroma_*
