@@ -175,7 +175,7 @@ What it does:
 
 ### Chunking Strategy
 
-#### Code: file-by-file chunking (one file = one chunk)
+#### Code: file-by-file chunking 
 
 I chunk Java code **file-by-file** to make retrieval more reliable under real constraints:
 
@@ -206,7 +206,7 @@ I use **Chroma persistence** so:
 
 - indexing is a one-time cost,
 - repeated QA runs are fast,
-- results are reproducible for reviewers.
+- results are reproducible.
 
 The CLI supports:
 
@@ -229,8 +229,6 @@ The QA prompt enforces strict grounding:
 - If context is insufficient, output:  
   `I cannot answer from the provided context.`
 
-This is designed to prevent hallucination when retrieval misses key information.
-
 #### Part B prompt (Architecture refactoring)
 
 The architecture prompt is intentionally strict and checkable:
@@ -241,8 +239,6 @@ The architecture prompt is intentionally strict and checkable:
 - Produce exactly one response following the required headings/format
 - If evidence is insufficient, output exactly:  
   `I cannot propose a concrete refactoring from the provided evidence.`
-
-The goal is to avoid generic architecture advice and force **system-specific, evidence-grounded** recommendations.
 
 ---
 
@@ -267,37 +263,119 @@ These heuristics are intentionally simple (no heavy parsing frameworks) to keep 
 
 ---
 
-## Handling LLM Non-Determinism, Uncertainty, and Hallucination
+## Handling LLM Non-Determinism, Hallucination, and Post-Checks
 
-This solution is designed so the LLM is **never the single source of truth**:
+This solution is designed so the LLM is **never the single source of truth**, and it **fails closed** (refuses / falls back / blocks) instead of inventing answers.
 
-- **Deterministic settings:** `LM_TEMPERATURE = 0` (stable output).
-- **Hard grounding constraints:**
-  - Part A can only use retrieved Context blocks.
-  - Part B can only use the computed EVIDENCE block and evidence IDs.
-- **Fail-closed behavior:** prompts instruct the model to refuse with an exact sentence when evidence/context is insufficient.
-- **Checkability:** architecture output requires explicit evidence IDs, explicit “break edge”, and file paths copied verbatim from evidence.
+### 1) Hard grounding constraints (prompt-level)
 
-Known limitations:
+Grounding starts in the prompts:
 
-- Import-based dependency graphs are approximations (reflection/dynamic wiring is not captured).
-- RAG answers are bounded by retrieval quality; the prompt explicitly avoids guessing.
+- **Part A:** “answer only using Context blocks” + mandatory `[Ck]` citations.
+- **Part B:** “answer only using EVIDENCE” + mandatory evidence IDs (e.g., `CYCLE_1`, `EDGE_3`) + verbatim file paths.
+
+This discourages the model from introducing facts that are not in retrieval/evidence.
+
+### 2) Availability check (LM Studio)
+
+Before calling the LLM, the code checks that the server/model is reachable by querying the OpenAI-compatible models endpoint:
+
+- `GET {LM_STUDIO_BASE_URL}/v1/models` with a short timeout
+
+If the LLM is down or unconfigured, the system uses fallback output.
+
+### 3) Part A guardrails + post-check + fallback (QA)
+
+**Guardrail A — retrieval relevance check**  
+After retrieving top-k chunks, the pipeline checks whether the retrieval looks related to the question using a small token-overlap heuristic:
+
+- tokenize question terms
+- remove stop words
+- count matches in each retrieved chunk
+- require a minimal threshold (>= 2 matched terms somewhere in top-k)
+
+If retrieval appears unrelated, the pipeline returns a safe fallback response.
+
+**Guardrail B — safe fallback answer**  
+If retrieval is unrelated, the LLM is unavailable, or the LLM call fails, the pipeline returns:
+
+- `I cannot answer from the provided context.`
+- a reason (e.g., “retrieval seems unrelated”, “LLM not available”, “LLM error…”)
+- a list of retrieved sources with `[C1]..[Ck]` citations
+- short evidence snippets around the best matching lines (so a reviewer can manually inspect)
+
+**Post-check — verify citations before returning**  
+Whether the answer comes from LLM **or** fallback, it is validated by a verifier:
+
+- must contain at least one citation like `[C1]`
+- each `[Ck]` must be within `1..num_contexts`
+
+If verification fails, the pipeline returns a hard block message (`BLOCKED: <reason>`).
+
+### 4) Part B post-check + fallback (Architecture)
+
+Part B also uses fail-closed behavior with explicit verification:
+
+- If the LLM is unavailable: return a minimal evidence-grounded fallback refactoring (or print raw evidence if no cycle/edge can be picked).
+- If the LLM responds: validate output against strict, checkable constraints before accepting it.
+
+**Post-check — structural + evidence validity**  
+The architecture verifier checks, among other things:
+
+- each required heading appears **exactly once**
+- the Evidence section references a `CYCLE_k` and only uses IDs that exist in the EVIDENCE block
+- the “Break edge” line references **exactly one** existing `EDGE_k`
+- any Zip4j package tokens mentioned must appear in the allowed packages derived from EVIDENCE, otherwise the line must be marked `[NEW]`
+
+If verification fails, the pipeline returns a fallback response with “verify failed: …” instead of accepting hallucinated output.
+
+### Deterministic settings
+
+Default model settings are conservative for repeatability:
+
+- `LM_TEMPERATURE = 0`
+- `LM_TOP_P = 1.0`
+- `LM_TIMEOUT_SECS = 120`
 
 ---
 
 ## Output Artifacts
 
-Depending on enabled debug settings, the repo may output:
+The repo may output:
 
 - Persistent Chroma DB directory: `./chroma_db/`
-- Optional prompt/evidence dumps (useful for reviewer traceability)
+- Recommendations for Architectural Improvement 'out/part_b_report.md'
 
 ---
 
-## Notes
 
-- Part A and Part B are intentionally decoupled:
-  - Part A depends on the Chroma index.
-  - Part B uses static dependency analysis only and does not need embeddings.
+## Limitations
+
+### Part A (RAG QA)
+
+- **File-level embedding has size + storage costs**  
+  Embedding whole files increases index size and embedding time. For larger repositories, this can become expensive to store and slower to build/rebuild.
+
+- **Large chunks can exceed LLM context limits**  
+  Even when retrieval finds the “right” file, the chunk may be too large to fit into the LLM prompt alongside instructions and other retrieved blocks. This can force truncation or reduce the number of chunks that can be included, which may lower answer quality.
+
+- **Granularity trade-off (file vs method)**  
+  File chunks reduce “missing local context” risk, but they lose precision for pinpoint questions (e.g., one method) and increase the chance that the most relevant snippet is buried inside a large block.
+
+- **Retrieval remains the bottleneck**  
+  Answers are bounded by what is retrieved in `TOP_K`. If the correct file is not retrieved (or is retrieved but too large to include), the system is designed to refuse.
+
+### Part B (Architecture Analysis)
+
+- **Evidence-only: no method-level refactoring details**  
+  Part B is grounded in **dependency evidence computed from the codebase** (imports/packages, fan-in/out, LOC, cycles). It does **not** pull detailed code context via the Part A RAG retrieval.  
+  As a result, refactoring proposals are **structural and package-level**, not method-by-method transformations.
+
+- **Static dependency approximation**  
+  Import-based dependency graphs approximate architecture and may miss dynamic wiring.
+
+- **Refactoring recommendations are constrained by evidence granularity**  
+  Because the EVIDENCE block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
+```
 
 ---
