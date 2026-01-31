@@ -1,6 +1,7 @@
 import re
 import requests
 import config
+import time
 
 def llm_is_available():
     if not config.LM_STUDIO_MODEL:
@@ -96,7 +97,10 @@ def generate_rag_answer_with_fallback(question, retrieved, prompt, verify_fn):
         return answer
 
     # Try LLM
+    start = time.perf_counter()
     answer, err = safe_generate_answer(prompt)
+    end = time.perf_counter()
+    print("[TIMING] qa_llm_ms=" + str(int((end - start) * 1000)))
     if err:
         answer = build_fallback_answer(err, question, retrieved)
 
@@ -112,7 +116,11 @@ def generate_arch_answer_with_fallback(prompt, evidence, verify_fn):
         return build_arch_fallback_answer(evidence, "LLM not available")
 
     # Try LLM
+    start = time.perf_counter()
     answer, err = safe_generate_answer(prompt)
+    end = time.perf_counter()
+    print("[TIMING] arch_llm_ms=" + str(int((end - start) * 1000)))
+
     if answer is None:
         return build_arch_fallback_answer(evidence, err)
 

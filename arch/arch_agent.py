@@ -21,8 +21,7 @@ def run_architecture_analysis(repo_path):
     evidence = _format_dependency_evidence(graph, cycle_findings, magnets, oversized)
 
     prompt = build_architecture_prompt(config.ARCH_QUERY, evidence)
-    print("\n=== PROMPT ===\n")
-    print(prompt)
+
     answer = generate_arch_answer_with_fallback(prompt, evidence, verify_arch_response)
 
     return answer
