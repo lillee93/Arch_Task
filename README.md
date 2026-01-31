@@ -353,7 +353,7 @@ The repo may output:
 ### Part A (RAG QA)
 
 - **File-level embedding has size + storage costs**  
-  Embedding whole files increases index size and embedding time. For larger repositories, this can become expensive to store and slower to build/rebuild.
+  Embedding whole files increases index size and embedding time. For larger repositories, this can become expensive to store and slower to build/rebuild, and very large source files may reach the maximum embedding input limit and therefore cannot be embedded without truncation or splitting.
 
 - **Large chunks can exceed LLM context limits**  
   Even when retrieval finds the right file, the chunk may be too large to fit into the LLM prompt alongside instructions and other retrieved blocks. This can force truncation or reduce the number of chunks that can be included, which may lower answer quality.
