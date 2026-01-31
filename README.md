@@ -2,8 +2,8 @@
 
 This repository implements a work test:
 
-- **Part A (Minimal RAG Prototype):** build a persistent index over a Java codebase and answer questions using retrieval + an LLM, with citations to retrieved context.
-- **Part B (Architecture-Oriented Agent Workflow):** extract a package dependency graph via static analysis, detect architecture smells (cycles / dependency magnets / oversized packages), produce an **EVIDENCE** block, and ask an LLM to propose **ONE** concrete refactoring grounded strictly in that evidence.
+- Part A (Minimal RAG Prototype): build a persistent index over a Java codebase and answer questions using retrieval + an LLM, with citations to retrieved context.
+- Part B (Architecture-Oriented Agent Workflow): extract a package dependency graph via static analysis, detect architecture smells (cycles / dependency magnets / oversized packages), produce an evidence block, and ask an LLM to propose concrete refactoring grounded strictly in that evidence.
 
 ---
 
@@ -134,7 +134,7 @@ python main.py qa "Where is AES encryption implemented?"
 What happens:
 
 - The pipeline retrieves `TOP_K` chunks from Chroma.
-- The LLM is prompted to answer **only** using retrieved context blocks.
+- The LLM is prompted to answer only using retrieved context blocks.
 - The answer includes citations like `[C1]`, `[C2]` that map back to the retrieved blocks.
 
 #### Optional) Rebuild the index (when repo/config changed)
@@ -161,13 +161,13 @@ python main.py arch
 What it does:
 
 1. Scans Java files and extracts `package` and `import` relations (static analysis).
-2. Builds a **package dependency graph**.
+2. Builds a package dependency graph.
 3. Detects smells (at least one of):
-   - **cyclic dependencies**
-   - **dependency magnets** (fan-in/fan-out hotspots)
-   - **oversized packages** (high total LOC)
-4. Produces an **EVIDENCE** block (cycles/edges/magnets/oversized + file paths).
-5. Prompts the LLM to propose **ONE** concrete refactoring grounded strictly in that evidence.
+   - cyclic dependencies
+   - dependency magnets (fan-in/fan-out hotspots)
+   - oversized packages (high total LOC)
+4. Produces an EVIDENCE block (cycles/edges/magnets/oversized + file paths).
+5. Prompts the LLM to propose concrete refactoring grounded strictly in that evidence.
 
 ---
 
@@ -177,10 +177,10 @@ What it does:
 
 #### Code: file-by-file chunking 
 
-I chunk Java code **file-by-file** to make retrieval more reliable under real constraints:
+I chunk Java code file-by-file to make retrieval more reliable under real constraints:
 
-- **Reduced “missing context” risk under limited TOP_K and token budgets**  
-  In code RAG, prompt size is limited. If code is split into many small fragments, answering often requires multiple fragments to appear in the top-k. Missing *one* fragment (e.g., helper methods, constants, local types) can make an answer incomplete. File chunks keep related context together, increasing the probability that one retrieved chunk contains what’s needed.
+- **Reduced missing context risk under limited TOP_K and token budgets**  
+  In code RAG, prompt size is limited. If code is split into many small fragments, answering often requires multiple fragments to appear in the top-k. Missing one fragment (e.g., helper methods, constants, local types) can make an answer incomplete. File chunks keep related context together, increasing the probability that one retrieved chunk contains what’s needed.
 
 - **Less sensitivity to embedding/retrieval noise**  
   Smaller chunks are more brittle: ranking quality can vary with query phrasing and embedding behavior. File-level chunks provide stronger semantic signal (imports + class + helpers) and are less likely to “almost match” while missing the crucial lines.
@@ -194,7 +194,7 @@ Trade-off:
 
 #### Docs: paragraph chunking
 
-Documentation is chunked by **paragraph** to preserve coherent natural-language units without mixing unrelated topics into a single chunk.
+Documentation is chunked by paragraph to preserve coherent natural-language units without mixing unrelated topics into a single chunk.
 
 ---
 
@@ -202,7 +202,7 @@ Documentation is chunked by **paragraph** to preserve coherent natural-language 
 
 #### Chroma persistent vector store
 
-I use **Chroma persistence** so:
+I use Chroma persistence so:
 
 - indexing is a one-time cost,
 - repeated QA runs are fast,
@@ -224,7 +224,7 @@ I use two prompts because Part A and Part B have different failure modes.
 
 The QA prompt enforces strict grounding:
 
-- Answer **ONLY** using provided Context blocks
+- Answer only using provided Context blocks
 - Cite important statements using `[C1]`, `[C2]`, ...
 - If context is insufficient, output:  
   `I cannot answer from the provided context.`
@@ -233,7 +233,7 @@ The QA prompt enforces strict grounding:
 
 The architecture prompt is intentionally strict and checkable:
 
-- Answer **ONLY** using the `EVIDENCE` block
+- Answer ONLY using the `EVIDENCE` block
 - Reference evidence IDs exactly (e.g., `CYCLE_k`, `EDGE_k`, `MAGNET_k`, `OVERSIZED_k`)
 - Copy file paths verbatim from `*_FILES` evidence lines
 - Produce exactly one response following the required headings/format
@@ -248,7 +248,7 @@ Part B uses lightweight static analysis (fast, reproducible, assignment-appropri
 
 - Parse Java `package ...;` and `import ...;` from each `.java` file
 - Exclude `src/test/` so test-only dependencies don’t skew the architecture view
-- Build a directed **package dependency graph**:
+- Build a directed package dependency graph:
   - nodes = packages
   - edges = “package A imports something from package B”
 - Use “longest matching package prefix” to map imports like `a.b.c.Foo` to package `a.b.c` if present
@@ -265,7 +265,6 @@ These heuristics are intentionally simple (no heavy parsing frameworks) to keep 
 
 ## Handling LLM Non-Determinism, Hallucination, and Post-Checks
 
-This solution is designed so the LLM is **never the single source of truth**, and it **fails closed** (refuses / falls back / blocks) instead of inventing answers.
 
 ### 1) Hard grounding constraints (prompt-level)
 
@@ -305,7 +304,7 @@ If retrieval is unrelated, the LLM is unavailable, or the LLM call fails, the pi
 - short evidence snippets around the best matching lines (so a reviewer can manually inspect)
 
 **Post-check — verify citations before returning**  
-Whether the answer comes from LLM **or** fallback, it is validated by a verifier:
+Whether the answer comes from LLM or fallback, it is validated by a verifier:
 
 - must contain at least one citation like `[C1]`
 - each `[Ck]` must be within `1..num_contexts`
@@ -322,9 +321,9 @@ Part B also uses fail-closed behavior with explicit verification:
 **Post-check — structural + evidence validity**  
 The architecture verifier checks, among other things:
 
-- each required heading appears **exactly once**
+- each required heading appears exactly once
 - the Evidence section references a `CYCLE_k` and only uses IDs that exist in the EVIDENCE block
-- the “Break edge” line references **exactly one** existing `EDGE_k`
+- the “Break edge” line references exactly one existing `EDGE_k`
 - any Zip4j package tokens mentioned must appear in the allowed packages derived from EVIDENCE, otherwise the line must be marked `[NEW]`
 
 If verification fails, the pipeline returns a fallback response with “verify failed: …” instead of accepting hallucinated output.
@@ -357,7 +356,7 @@ The repo may output:
   Embedding whole files increases index size and embedding time. For larger repositories, this can become expensive to store and slower to build/rebuild.
 
 - **Large chunks can exceed LLM context limits**  
-  Even when retrieval finds the “right” file, the chunk may be too large to fit into the LLM prompt alongside instructions and other retrieved blocks. This can force truncation or reduce the number of chunks that can be included, which may lower answer quality.
+  Even when retrieval finds the right file, the chunk may be too large to fit into the LLM prompt alongside instructions and other retrieved blocks. This can force truncation or reduce the number of chunks that can be included, which may lower answer quality.
 
 - **Granularity trade-off (file vs method)**  
   File chunks reduce “missing local context” risk, but they lose precision for pinpoint questions (e.g., one method) and increase the chance that the most relevant snippet is buried inside a large block.
@@ -368,12 +367,12 @@ The repo may output:
 ### Part B (Architecture Analysis)
 
 - **Evidence-only: no method-level refactoring details**  
-  Part B is grounded in **dependency evidence computed from the codebase** (imports/packages, fan-in/out, LOC, cycles). It does **not** pull detailed code context via the Part A RAG retrieval.  
-  As a result, refactoring proposals are **structural and package-level**, not method-by-method transformations.
+  Part B is grounded in dependency evidence computed from the codebase (imports/packages, fan-in/out, LOC, cycles). It does not pull detailed code context via the Part A RAG retrieval.  
+  As a result, refactoring proposals are structural and package-level, not method-by-method transformations.
 
 - **Static dependency approximation**  
   Import-based dependency graphs approximate architecture and may miss dynamic wiring.
 
 - **Refactoring recommendations are constrained by evidence granularity**  
-  Because the EVIDENCE block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
+  Because the evidence block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
 ```
