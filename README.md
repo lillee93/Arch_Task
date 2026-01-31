@@ -1,6 +1,6 @@
 # Arch_Task — Minimal RAG (Part A) + Architecture Agent (Part B) for Zip4j
 
-This repository implements a lightweight, interview-assignment style solution for the “Software Architecture in the AI Era” work test:
+This repository implements a work test:
 
 - **Part A (Minimal RAG Prototype):** build a persistent index over a Java codebase and answer questions using retrieval + an LLM, with citations to retrieved context.
 - **Part B (Architecture-Oriented Agent Workflow):** extract a package dependency graph via static analysis, detect architecture smells (cycles / dependency magnets / oversized packages), produce an **EVIDENCE** block, and ask an LLM to propose **ONE** concrete refactoring grounded strictly in that evidence.
@@ -377,5 +377,3 @@ The repo may output:
 - **Refactoring recommendations are constrained by evidence granularity**  
   Because the EVIDENCE block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
 ```
-
----
