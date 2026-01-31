@@ -74,18 +74,49 @@ def build_fallback_answer(reason, question, retrieved):
 
     return "\n".join(out)
 
+def generate_rag_answer_with_fallback(question, retrieved, prompt, verify_fn):
+    
+    if not retrieved:
+        return "No relevant retrieval results."
+
+    # Retrieved exists but looks unrelated
+    if not retrieval_looks_relevant(question, retrieved):
+        answer = build_fallback_answer("retrieval seems unrelated to the question", question, retrieved)
+        ok, msg = verify_fn(answer, len(retrieved))
+        if not ok:
+            return "BLOCKED: " + msg
+        return answer
+
+    # LLM down/unconfigured -> fallback
+    if not llm_is_available():
+        answer = build_fallback_answer("LLM not available", question, retrieved)
+        ok, msg = verify_fn(answer, len(retrieved))
+        if not ok:
+            return "BLOCKED: " + msg
+        return answer
+
+    # Try LLM
+    answer, err = safe_generate_answer(prompt)
+    if err:
+        answer = build_fallback_answer(err, question, retrieved)
+
+    ok, msg = verify_fn(answer, len(retrieved))
+    if not ok:
+        return "BLOCKED: " + msg
+
+    return answer
 
 def generate_arch_answer_with_fallback(prompt, evidence, verify_fn):
-    # 1) LLM not available -> deterministic fallback
+
     if not llm_is_available():
         return build_arch_fallback_answer(evidence, "LLM not available")
 
-    # 2) Try LLM
+    # Try LLM
     answer, err = safe_generate_answer(prompt)
     if answer is None:
         return build_arch_fallback_answer(evidence, err)
 
-    # 3) Verify LLM output; if fails -> deterministic fallback
+    # Verify LLM output; if fails
     ok, msg = verify_fn(answer, evidence)
     if not ok:
         return build_arch_fallback_answer(evidence, "verify failed: " + msg)

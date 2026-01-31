@@ -1,97 +1,23 @@
 import sys
 
-import config
-from rag_pipeline.ingestion import ingest_repository
-from rag_pipeline.embedding import embed_and_store, load_collection
-from rag_pipeline.retrieval import retrieve_top_k
-from tools.prompt_builder import build_prompt
-from tools.llm_client import llm_is_available, safe_generate_answer, retrieval_looks_relevant, build_fallback_answer
-from tools.verify import verify_citations
+from tools.runtime import get_repo_path, get_collection
+from rag_pipeline.qa_agent import run_question_answering
 
-from arch.agent import run_architecture_analysis
+from arch.arch_agent import run_architecture_analysis
 from arch.report import write_report
 
 
-def _get_repo_path():
-    repo_path = getattr(config, "REPO_PATH", "").strip()
-    if not repo_path:
-        print("Missing REPO_PATH in rag_pipeline/config.py")
-        return None
-    return repo_path
-
-
-def _get_collection(build, rebuild):
-    """
-    - build=True: ingest + embed now (persisted on disk)
-    - rebuild=True: delete collection then rebuild
-    - build=False: just open persisted collection
-    """
-    repo_path = _get_repo_path()
-    if repo_path is None:
-        return None
-
-    if rebuild:
-        build = True
-
-    if build:
-        docs = ingest_repository(repo_path)
-        return embed_and_store(docs, reset=rebuild)
-
-    collection = load_collection()
-    if collection.count() == 0:
-        print("Index is empty. Run with --build to create embeddings.")
-        return None
-
-    return collection
 
 
 def run_qa(question, build_index, rebuild_index):
-    collection = _get_collection(build=build_index, rebuild=rebuild_index)
-    if collection is None:
+    answer = run_question_answering(question, build_index, rebuild_index)
+    if answer is None:
         return
-
-    retrieved = retrieve_top_k(collection, question, config.TOP_K)
-    if not retrieved:
-        print("No relevant retrieval results.")
-        return
-    
-    # If retrieved exists but looks unrelated, do retrieval-only fallback immediately.
-    if not retrieval_looks_relevant(question, retrieved):
-        answer = build_fallback_answer("retrieval seems unrelated to the question", question, retrieved)
-        ok, msg = verify_citations(answer, len(retrieved))
-        if not ok:
-            print("BLOCKED:", msg)
-            return
-        print(answer)
-        return
-    prompt = build_prompt(question, retrieved)
-    print("PROMPT:\n", prompt)
-
-    # If LLM down/unconfigured, fallback.
-    if not llm_is_available():
-        answer = build_fallback_answer("LLM not available", question, retrieved)
-        ok, msg = verify_citations(answer, len(retrieved))
-        if not ok:
-            print("BLOCKED:", msg)
-            return
-        print(answer)
-        return
-    
-     # Try LLM; if any error, fallback.
-    answer, err = safe_generate_answer(prompt)
-    if err:
-        answer = build_fallback_answer(err, question, retrieved)
-
-    ok, msg = verify_citations(answer, len(retrieved))
-    if not ok:
-        print("BLOCKED:", msg)
-        return
-
     print(answer)
 
 
 def run_arch():
-    repo_path = _get_repo_path()
+    repo_path = get_repo_path()
     if repo_path is None:
         return
 
@@ -128,7 +54,7 @@ def main():
             return
 
     if mode == "build":
-        _ = _get_collection(build=True, rebuild=rebuild_index)
+        _ = get_collection(build=True, rebuild=rebuild_index)
         return
 
     if mode == "qa":
