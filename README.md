@@ -233,7 +233,7 @@ The QA prompt enforces strict grounding:
 
 The architecture prompt is intentionally strict and checkable:
 
-- Answer ONLY using the `EVIDENCE` block
+- Answer only using the `EVIDENCE` block
 - Reference evidence IDs exactly (e.g., `CYCLE_k`, `EDGE_k`, `MAGNET_k`, `OVERSIZED_k`)
 - Copy file paths verbatim from `*_FILES` evidence lines
 - Produce exactly one response following the required headings/format
@@ -352,13 +352,13 @@ The repo may output:
 
 ### Part A (RAG QA)
 
-- **File-level embedding has size + storage costs**  
+- **File-level embedding has size and storage costs**  
   Embedding whole files increases index size and embedding time. For larger repositories, this can become expensive to store and slower to build/rebuild, and very large source files may reach the maximum embedding input limit and therefore cannot be embedded without truncation or splitting.
 
 - **Large chunks can exceed LLM context limits**  
   Even when retrieval finds the right file, the chunk may be too large to fit into the LLM prompt alongside instructions and other retrieved blocks. This can force truncation or reduce the number of chunks that can be included, which may lower answer quality.
 
-- **Granularity trade-off (file vs method)**  
+- **Granularity trade-off**  
   File chunks reduce “missing local context” risk, but they lose precision for pinpoint questions (e.g., one method) and increase the chance that the most relevant snippet is buried inside a large block.
 
 - **Retrieval remains the bottleneck**  
@@ -376,3 +376,4 @@ The repo may output:
 - **Refactoring recommendations are constrained by evidence granularity**  
   Because the evidence block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
 ```
+More detailed limitations are provided in my report (Part C, Question 1).
