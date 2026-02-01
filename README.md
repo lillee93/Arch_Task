@@ -1,4 +1,4 @@
-# Arch_Task — Minimal RAG (Part A) + Architecture Agent (Part B) for Zip4j
+# Arch_Task
 
 This repository implements a work test:
 
