@@ -1,4 +1,3 @@
-# retrieval.py
 from rag_pipeline.ingestion import DocumentChunk
 
 def retrieve_top_k(collection, query, top_k, scope="code"):

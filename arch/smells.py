@@ -1,4 +1,3 @@
-# arch/smells.py
 def top_n_by_total_degree(indeg, outdeg, n):
     items = []
     for k in set(list(indeg.keys()) + list(outdeg.keys())):
