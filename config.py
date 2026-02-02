@@ -1,5 +1,3 @@
-# config.py
-
 # Repository root (edit this once)
 REPO_PATH = "E:\\arch_task\\zip4j" 
 
