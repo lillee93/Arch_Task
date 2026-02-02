@@ -2,7 +2,6 @@ import config
 import re
 from rag_pipeline.ingestion import DocumentChunk
 
-MAX_CANDIDATE_TOKENS = 1200
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_]+|[^\s]", re.UNICODE)
 
