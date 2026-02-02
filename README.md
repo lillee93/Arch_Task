@@ -191,11 +191,11 @@ I chunk Java code file-by-file to make retrieval more reliable under real constr
 - **Better provenance and reviewability**  
   Citations map cleanly to a file path (e.g., `src/.../zip4j.java`), which makes results easy to verify.
 
-  Future improvement: hierarchical / AST-based chunking to keep semantic structure while controlling chunk size.
-
 Trade-off:
 
 - File chunks can be large. To control prompt size, I truncate each retrieved file chunk to a fixed budget before prompting the LLM. I also apply a retrieval relevance check and enforce strict grounding when context is insufficient.
+
+Future improvement: hierarchical / AST-based chunking to keep semantic structure while controlling chunk size.
 
 #### Docs: paragraph chunking
 
