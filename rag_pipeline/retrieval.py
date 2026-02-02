@@ -18,17 +18,25 @@ def truncate_to_max_tokens(text, max_tokens):
 
     return text
 
-def retrieve_top_k(collection, query, top_k, scope="code"):
+def retrieve_top_k(collection, query, top_k, scope=None):
     if top_k < 1:
         return []
+    
+    if scope is None:
+        scope = config.RETRIEVAL_SCOPE
 
+    if scope == "both":
+        where_filter = {"type": {"$in": ["code", "text"]}}
+    else:
+        where_filter = {"type": scope}
+    print("Retrieval scope filter:", where_filter)
     results = collection.query(
         query_texts=[query],
         n_results=top_k,
-        where={"type": scope},
+        where=where_filter,
         include=["documents", "metadatas", "distances"]
     )
-
+    print("Raw retrieval results:", results)
     chunks = []
     if not results:
         return chunks

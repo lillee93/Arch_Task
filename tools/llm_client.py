@@ -46,7 +46,7 @@ def retrieval_looks_relevant(question, retrieved):
             best_hits = hits
 
     # Minimal threshold: at least 2 matched terms somewhere in top-k
-    return best_hits >= 2
+    return best_hits >= 1
 
 
 def build_fallback_answer(reason, question, retrieved):
