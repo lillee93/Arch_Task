@@ -217,7 +217,7 @@ The CLI supports:
 - `python main.py rebuild` (refresh index after changes)
 - `python main.py qa ...` (query using the persisted index)
 
-The persisted Chroma collection contains both code and README chunks; RETRIEVAL_SCOPE restricts the search space to reduce mixing unrelated evidence. "both" is useful for “how to use” questions that are answered in README examples, while "code" is preferred for “where/how implemented” questions. Before building the final context blocks, each retrieved chunk is truncated to `MAX_CANDIDATE_TOKENS` to stay within the LLM server’s context/token limits and avoid server-side errors.
+The persisted Chroma collection contains both code and README chunks; `RETRIEVAL_SCOPE` restricts the search space to reduce mixing unrelated evidence. "both" is useful for “how to use” questions that are answered in README examples, while "code" is preferred for “where/how implemented” questions. Before building the final context blocks, each retrieved chunk is truncated to `MAX_CANDIDATE_TOKENS` to stay within the LLM server’s token limits and avoid server-side errors.
 
 ---
 
@@ -371,7 +371,7 @@ The repo may output:
 
 - **Truncation can hide relevant evidence**
   To avoid prompt overflow and server errors, retrieved candidates may be truncated; this can remove relevant details that appear later in a file, reducing answer completeness.
-  
+
 ### Part B (Architecture Analysis)
 
 - **Evidence-only: no method-level refactoring details**  
