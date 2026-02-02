@@ -377,4 +377,4 @@ The repo may output:
 - **Refactoring recommendations are constrained by validation scope**  
   Because my Part B pipeline validates only structural format and evidence provenance, an LLM recommendation can pass the post-check verifier while still being wrong in practice; without external validation gates such as a clean build, regression tests, and a post-change dependency-graph diff, correctness and impact cannot be guaranteed.
 ```
-More detailed limitations are provided in my report (Part C, Question 1).
+More detailed limitations are discussed in my report (see the Limitations section and Part C, Question 1).
