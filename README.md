@@ -374,9 +374,8 @@ The repo may output:
 
 ### Part B (Architecture Analysis)
 
-- **Evidence-only: no method-level refactoring details**  
-  Part B is grounded in dependency evidence computed from the codebase (imports/packages, fan-in/out, LOC, cycles). It does not pull detailed code context via the Part A RAG retrieval.  
-  As a result, refactoring proposals are structural and package-level, not method-by-method transformations.
+- **Evidence-bounded recommendations: boundary and dependency level**  
+  Part B is grounded in deterministic dependency evidence computed from the codebase (imports and packages, fan-in and fan-out, LOC, and detected cycles). It does not retrieve or summarize symbol-level usage sites via the Part A RAG index. As a result, recommendations focus on boundary and dependency-structure changes, and finer-grained refactor steps are out of scope unless the evidence extractor is extended with resolved symbol references or lightweight slices that localize concrete usage sites.
 
 - **Static dependency approximation**  
   Import-based dependency graphs approximate architecture and may miss dynamic wiring.
