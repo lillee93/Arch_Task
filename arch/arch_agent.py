@@ -1,4 +1,3 @@
-
 import config
 from arch.java_static import scan_repo_java
 from arch.dep_graph import build_package_graph, compute_degrees, find_cycles

@@ -7,8 +7,6 @@ from arch.arch_agent import run_architecture_analysis
 from arch.report import write_report
 
 
-
-
 def run_qa(question, build_index, rebuild_index):
     answer = run_question_answering(question, build_index, rebuild_index)
     if answer is None:

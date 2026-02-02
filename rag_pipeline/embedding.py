@@ -1,10 +1,7 @@
-
 import os
 import chromadb
 from chromadb.utils import embedding_functions
-
 import config
-
 
 def _make_embedding_fn():
     return embedding_functions.SentenceTransformerEmbeddingFunction(
