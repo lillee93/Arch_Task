@@ -183,17 +183,19 @@ What it does:
 I chunk Java code file-by-file to make retrieval more reliable under real constraints:
 
 - **Reduced missing context risk under limited TOP_K and token budgets**  
-  In code RAG, prompt size is limited. If code is split into many small fragments, answering often requires multiple fragments to appear in the top-k. Missing one fragment (e.g., helper methods, constants, local types) can make an answer incomplete. File chunks keep related context together, increasing the probability that one retrieved chunk contains what’s needed.
+  In code RAG, prompt size is limited. If code is split into many small fragments, answering often requires multiple fragments to appear in the top-k. Missing one fragment can make an answer incomplete. File chunks keep related context together, increasing the probability that one retrieved chunk contains what’s needed.
 
 - **Less sensitivity to embedding/retrieval noise**  
-  Smaller chunks are more brittle: ranking quality can vary with query phrasing and embedding behavior. File-level chunks provide stronger semantic signal (imports + class + helpers) and are less likely to “almost match” while missing the crucial lines.
+  Smaller chunks are more brittle: slight changes in query phrasing or embedding similarity can reorder near-ties and surface false positives—snippets that appear relevant but omit required context. File-level chunks provide a stronger semantic footprint, so retrieved results are less likely to be misleading partial matches.
 
 - **Better provenance and reviewability**  
   Citations map cleanly to a file path (e.g., `src/.../zip4j.java`), which makes results easy to verify.
 
+  Future improvement: hierarchical / AST-based chunking to keep semantic structure while controlling chunk size.
+
 Trade-off:
 
-- File chunks can be large. I keep retrieval small (`TOP_K = 3`) and enforce strict grounding so the model refuses rather than guessing when context is insufficient.
+- File chunks can be large. To control prompt size, I truncate each retrieved file chunk to a fixed budget before prompting the LLM. I also apply a retrieval relevance check and enforce strict grounding when context is insufficient.
 
 #### Docs: paragraph chunking
 
