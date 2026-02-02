@@ -258,7 +258,7 @@ Part B uses lightweight static analysis (fast, reproducible, assignment-appropri
 - Build a directed package dependency graph:
   - nodes = packages
   - edges = “package A imports something from package B”
-- Use “longest matching package prefix” to map imports like `a.b.c.Foo` to package `a.b.c` if present
+- Use “longest matching package prefix” to map imports like `a.b.c.Zip4j` to package `a.b.c` if present
 
 #### Smell detection heuristics
 
