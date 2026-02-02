@@ -2,7 +2,7 @@
 
 This repository implements a work test:
 
-- Part A (Minimal RAG Prototype): build a persistent index over a Java codebase and answer questions using retrieval + an LLM, with citations to retrieved context.
+- Part A (RAG Pipeline): build a persistent index over a Java codebase and answer questions using retrieval + an LLM, with citations to retrieved context.
 - Part B (Architecture-Oriented Agent Workflow): extract a package dependency graph via static analysis, detect architecture smells (cycles / dependency magnets / oversized packages), produce an evidence block, and ask an LLM to propose concrete refactoring grounded strictly in that evidence.
 
 ---
@@ -117,7 +117,7 @@ Notes:
 
 Run all commands from the repo root.
 
-### Part A — Minimal RAG QA
+### Part A — RAG QA Pipeline
 
 #### Step 1) Build the persistent index (required before QA)
 
@@ -189,7 +189,7 @@ I chunk Java code file-by-file to make retrieval more reliable under real constr
   Smaller chunks are more brittle: ranking quality can vary with query phrasing and embedding behavior. File-level chunks provide stronger semantic signal (imports + class + helpers) and are less likely to “almost match” while missing the crucial lines.
 
 - **Better provenance and reviewability**  
-  Citations map cleanly to a file path (e.g., `src/.../Foo.java`), which makes results easy to verify.
+  Citations map cleanly to a file path (e.g., `src/.../zip4j.java`), which makes results easy to verify.
 
 Trade-off:
 
