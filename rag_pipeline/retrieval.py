@@ -29,14 +29,14 @@ def retrieve_top_k(collection, query, top_k, scope=None):
         where_filter = {"type": {"$in": ["code", "text"]}}
     else:
         where_filter = {"type": scope}
-    print("Retrieval scope filter:", where_filter)
+
     results = collection.query(
         query_texts=[query],
         n_results=top_k,
         where=where_filter,
         include=["documents", "metadatas", "distances"]
     )
-    print("Raw retrieval results:", results)
+
     chunks = []
     if not results:
         return chunks
