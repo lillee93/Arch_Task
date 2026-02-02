@@ -11,6 +11,7 @@ CHROMA_SPACE = "cosine"
 
 # Retrieval
 TOP_K = 3
+MAX_CANDIDATE_TOKENS = 1200
 
 # LM Studio (OpenAI-compatible)
 LM_STUDIO_BASE_URL = "http://localhost:1234"

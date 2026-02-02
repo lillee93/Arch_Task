@@ -1,4 +1,22 @@
+import config
+import re
 from rag_pipeline.ingestion import DocumentChunk
+
+MAX_CANDIDATE_TOKENS = 1200
+
+_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+|[^\s]", re.UNICODE)
+
+def truncate_to_max_tokens(text, max_tokens):
+    if not text:
+        return text
+
+    count = 0
+    for m in _TOKEN_RE.finditer(text):
+        count += 1
+        if count >= max_tokens:
+            return text[: m.end()]
+
+    return text
 
 def retrieve_top_k(collection, query, top_k, scope="code"):
     if top_k < 1:
@@ -29,6 +47,7 @@ def retrieve_top_k(collection, query, top_k, scope="code"):
     i = 0
     while i < len(docs):
         doc_text = docs[i]
+        doc_text = truncate_to_max_tokens(doc_text, config.MAX_CANDIDATE_TOKENS)
         meta = metas[i] if i < len(metas) else {}
         dist = dists[i] if i < len(dists) else None
 

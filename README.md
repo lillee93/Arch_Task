@@ -92,6 +92,7 @@ CHROMA_SPACE = "cosine"
 
 # Retrieval
 TOP_K = 3
+MAX_CANDIDATE_TOKENS = 1200
 
 # LM Studio (OpenAI-compatible)
 LM_STUDIO_BASE_URL = "http://localhost:1234"
@@ -373,7 +374,7 @@ The repo may output:
 - **Static dependency approximation**  
   Import-based dependency graphs approximate architecture and may miss dynamic wiring.
 
-- **Refactoring recommendations are constrained by evidence granularity**  
-  Because the evidence block focuses on packages/edges/files (not full AST or call graphs), recommendations prioritize breaking dependency edges and improving modular boundaries, rather than proposing exact method signatures or precise extraction steps at the method level.
+- **Refactoring recommendations are constrained by validation scope**  
+  Because my Part B pipeline validates only structural format and evidence provenance, an LLM recommendation can pass the post-check verifier while still being wrong in practice; without external validation gates such as a clean build, regression tests, and a post-change dependency-graph diff, correctness and impact cannot be guaranteed.
 ```
 More detailed limitations are provided in my report (Part C, Question 1).
