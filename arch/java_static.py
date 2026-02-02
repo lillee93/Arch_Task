@@ -1,4 +1,3 @@
-# arch/java_static.py
 import os
 import re
 
