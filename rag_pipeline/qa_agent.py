@@ -19,7 +19,6 @@ def run_question_answering(question, build_index, rebuild_index):
     print("[TIMING] qa_retrieve_ms=" + str(int((t1 - t0) * 1000)))
 
     prompt = build_prompt(question, retrieved)
-    print("PROMPT:\n", prompt)
 
     answer = generate_rag_answer_with_fallback(question, retrieved, prompt, verify_citations)
     return answer
